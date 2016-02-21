@@ -6,7 +6,7 @@ namespace T8_Telecommunication_Lab5_Server
     {
         public string Name;
         public Socket Socket;
-
-
+        public bool IsFree = true;
+        public int MatrixIndex = -1;
     }
 }

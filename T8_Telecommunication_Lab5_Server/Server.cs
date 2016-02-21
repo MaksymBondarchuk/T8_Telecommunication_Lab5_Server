@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Media;
 
 namespace T8_Telecommunication_Lab5_Server
 {
@@ -14,10 +15,10 @@ namespace T8_Telecommunication_Lab5_Server
 
         public async Task Run()
         {
-            await Task.Run((Action)Background);
+            await Task.Run((Action)Accepter);
         }
 
-        public async void Background()
+        public void Accepter()
         {
             // Establish the local endpoint for the socket.
             // Dns.GetHostName returns the name of the 
@@ -49,6 +50,7 @@ namespace T8_Telecommunication_Lab5_Server
                     int bytesRec = handler.Receive(bytes);
                     clientName += Encoding.ASCII.GetString(bytes, 0, bytesRec);
 
+                    var selectedIndex = -1;
                     lock (Data)
                     {
                         var aliases = Data.Clients.Count(client => client.Name.Contains(clientName));
@@ -60,28 +62,34 @@ namespace T8_Telecommunication_Lab5_Server
                             Name = clientName,
                             Socket = handler
                         });
+
+                        Console.WriteLine(@"Received client from PC with name : {0}", clientName);
+
+                        //byte[] msg = Encoding.ASCII.GetBytes(clientName);
+                        byte[] msg;
+                        if (Data.FreeRows.Count != 0)
+                        {
+                            selectedIndex = Data.FreeRows[0];
+                            msg = Data.Matrix[selectedIndex].ToArray();
+                            //Data.FreeRows.RemoveAt(0);
+                        }
+                        else
+                            msg = Encoding.ASCII.GetBytes("No work for you");
+
+                        handler.Send(msg);
                     }
-                    //// An incoming connection needs to be processed.
-                    //while (true)
-                    //{
-                    //    var bytes = new byte[1024];
-                    //    int bytesRec = handler.Receive(bytes);
-                    //    data += Encoding.ASCII.GetString(bytes, 0, bytesRec);
-                    //    if (data.IndexOf("<EOF>", StringComparison.Ordinal) > -1)
-                    //    {
-                    //        break;
-                    //    }
-                    //}
 
-                    // Show the data on the console.
-                    Console.WriteLine(@"Text received : {0}", clientName);
-
-                    // Echo the data back to the client.
-                    byte[] msg = Encoding.ASCII.GetBytes(clientName);
-
-                    handler.Send(msg);
+                    bytesRec = handler.Receive(bytes);
                     handler.Shutdown(SocketShutdown.Both);
                     handler.Close();
+
+                    lock (Data)
+                    {
+                        for (var i = 0; i < Data.Matrix[selectedIndex].Count; i++)
+                            Data.Matrix[selectedIndex][i] = bytes[i];
+                        Data.CompletedRows.Add(selectedIndex);
+                        Data.FreeRows.Remove(selectedIndex);
+                    }
                 }
 
             }
@@ -89,10 +97,6 @@ namespace T8_Telecommunication_Lab5_Server
             {
                 Console.WriteLine(e.ToString());
             }
-
-            Console.WriteLine(@"
-Press ENTER to continue...");
-            Console.Read();
         }
     }
 }

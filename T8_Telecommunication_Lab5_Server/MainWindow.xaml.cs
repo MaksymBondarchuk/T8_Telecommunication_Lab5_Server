@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Windows.Controls;
 using NBLib;
 
@@ -9,8 +10,15 @@ namespace T8_Telecommunication_Lab5_Server
     /// </summary>
     public partial class MainWindow
     {
+        public const int MatrixSize = 10;
         public Server Server = new Server();
-        private readonly System.Windows.Threading.DispatcherTimer _timer = new System.Windows.Threading.DispatcherTimer();
+        public int PreviousCompletedRowsCount;
+        public int PreviousClientsCount;
+
+        private readonly System.Windows.Threading.DispatcherTimer _timer =
+            new System.Windows.Threading.DispatcherTimer();
+
+        private readonly Random _rand = new Random();
 
         public MainWindow()
         {
@@ -26,21 +34,27 @@ namespace T8_Telecommunication_Lab5_Server
 
             _timer.Start();
             await Server.Run();
-            
+
         }
 
         private void Tick(object sender, EventArgs e)
         {
-            TextBoxClients.Clear();
             lock (Server.Data)
             {
-                foreach (var client in Server.Data.Clients)
-                    TextBoxClients.Text += $"{client.Name}\n";
-                //ComboBoxClient.Items.Add(new ComboBoxItem { Content = client.Name });
+                if (PreviousClientsCount != Server.Data.Clients.Count)
+                {
+                    TextBoxClients.Clear();
+                    foreach (var client in Server.Data.Clients)
+                        TextBoxClients.Text += $"{client.Name}\n";
+                    PreviousClientsCount = Server.Data.Clients.Count;
+                }
+
+                if (PreviousCompletedRowsCount != Server.Data.CompletedRows.Count)
+                {
+                    PrintMatrix();
+                    PreviousCompletedRowsCount = Server.Data.CompletedRows.Count;
+                }
             }
-            //TextBoxClients.Text = Server.Data.Clients.Count.ToString();
-            //TextBoxClients.Text = "1";
-            //Console.WriteLine(@"Timer works");
         }
 
         private void ComboBoxClient_DropDownOpened(object sender, EventArgs e)
@@ -50,6 +64,41 @@ namespace T8_Telecommunication_Lab5_Server
             {
                 foreach (var client in Server.Data.Clients)
                     ComboBoxClient.Items.Add(new ComboBoxItem { Content = client.Name });
+            }
+        }
+
+        private void PrintMatrix()
+        {
+            lock (Server.Data)
+            {
+                TextBoxMatrix.Clear();
+                foreach (var t in Server.Data.Matrix)
+                {
+                    foreach (var t1 in t)
+                        TextBoxMatrix.Text += $"{t1,4}";
+                    TextBoxMatrix.Text += "\n";
+                }
+            }
+        }
+
+        private void ButtonGenerate_Click(object sender, System.Windows.RoutedEventArgs e)
+        {
+            ButtonStartServer.IsEnabled = true;
+            lock (Server.Data)
+            {
+                Server.Data.Matrix.Clear();
+                for (var i = 0; i < MatrixSize; i++)
+                {
+                    Server.Data.Matrix.Add(new List<byte>(MatrixSize));
+                    for (var j = 0; j < MatrixSize; j++)
+                        Server.Data.Matrix[i].Add(Convert.ToByte(_rand.Next(256)));
+                }
+
+                Server.Data.CompletedRows.Clear();
+                for (var i = 0; i < MatrixSize; i++)
+                    Server.Data.FreeRows.Add(i);
+
+                PrintMatrix();
             }
         }
     }
