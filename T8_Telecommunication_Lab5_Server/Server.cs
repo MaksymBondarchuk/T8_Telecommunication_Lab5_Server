@@ -1,5 +1,6 @@
 ﻿using System;
 using System.ComponentModel;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -9,6 +10,8 @@ namespace T8_Telecommunication_Lab5_Server
 {
     public class Server
     {
+        public CommonResource Data = new CommonResource();
+
         public async Task Run()
         {
             await Task.Run((Action)Background);
@@ -40,25 +43,41 @@ namespace T8_Telecommunication_Lab5_Server
                     Console.WriteLine(@"Waiting for a connection...");
                     // Program is suspended while waiting for an incoming connection.
                     Socket handler = listener.Accept();
-                    string data = null;
+                    string clientName = null;
 
-                    // An incoming connection needs to be processed.
-                    while (true)
+                    var bytes = new byte[1024];
+                    int bytesRec = handler.Receive(bytes);
+                    clientName += Encoding.ASCII.GetString(bytes, 0, bytesRec);
+
+                    lock (Data)
                     {
-                        var bytes = new byte[1024];
-                        int bytesRec = handler.Receive(bytes);
-                        data += Encoding.ASCII.GetString(bytes, 0, bytesRec);
-                        if (data.IndexOf("<EOF>", StringComparison.Ordinal) > -1)
+                        var aliases = Data.Clients.Count(client => client.Name.Contains(clientName));
+                        if (aliases != 0)
+                            clientName += $"({aliases + 1})";
+
+                        Data.Clients.Add(new Client
                         {
-                            break;
-                        }
+                            Name = clientName,
+                            Socket = handler
+                        });
                     }
+                    //// An incoming connection needs to be processed.
+                    //while (true)
+                    //{
+                    //    var bytes = new byte[1024];
+                    //    int bytesRec = handler.Receive(bytes);
+                    //    data += Encoding.ASCII.GetString(bytes, 0, bytesRec);
+                    //    if (data.IndexOf("<EOF>", StringComparison.Ordinal) > -1)
+                    //    {
+                    //        break;
+                    //    }
+                    //}
 
                     // Show the data on the console.
-                    Console.WriteLine(@"Text received : {0}", data);
+                    Console.WriteLine(@"Text received : {0}", clientName);
 
                     // Echo the data back to the client.
-                    byte[] msg = Encoding.ASCII.GetBytes(data);
+                    byte[] msg = Encoding.ASCII.GetBytes(clientName);
 
                     handler.Send(msg);
                     handler.Shutdown(SocketShutdown.Both);
