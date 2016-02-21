@@ -1,7 +1,24 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Windows;
 using System.Windows.Controls;
-using NBLib;
+using System.Windows.Controls.Primitives;
+using System.Windows.Threading;
+
+// For button click functions call
+namespace System.Windows.Controls
+{
+    /// <summary>
+    /// For allow perform button click 
+    /// </summary>
+    public static class MyExt
+    {
+        public static void PerformClick(this Button btn)
+        {
+            btn.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
+        }
+    }
+}
 
 namespace T8_Telecommunication_Lab5_Server
 {
@@ -14,9 +31,10 @@ namespace T8_Telecommunication_Lab5_Server
         public Server Server = new Server();
         public int PreviousCompletedRowsCount;
         public int PreviousClientsCount;
+        public bool MessageCompleteIsShown;
 
-        private readonly System.Windows.Threading.DispatcherTimer _timer =
-            new System.Windows.Threading.DispatcherTimer();
+        private readonly DispatcherTimer _timer =
+            new DispatcherTimer();
 
         private readonly Random _rand = new Random();
 
@@ -28,25 +46,33 @@ namespace T8_Telecommunication_Lab5_Server
             _timer.Interval = new TimeSpan(0, 0, 0, 0, 100);
         }
 
-        private async void ButtonStartServer_Click(object sender, System.Windows.RoutedEventArgs e)
+        private async void ButtonStartServer_Click(object sender, RoutedEventArgs e)
         {
-            ConsoleManager.Show();
-
+            ButtonStartServer.IsEnabled = false;
+            //ConsoleManager.Show();
+            TextBoxClients.Text += "Server started\n";
             _timer.Start();
             await Server.Run();
-
+            ButtonStartServer.IsEnabled = false;
         }
 
         private void Tick(object sender, EventArgs e)
         {
             lock (Server.Data)
             {
-                if (PreviousClientsCount != Server.Data.Clients.Count)
+                //if (PreviousClientsCount != Server.Data.Clients.Count)
+                //{
+                //    TextBoxClients.Clear();
+                //    foreach (var client in Server.Data.Clients)
+                //        TextBoxClients.Text += $"{client.Name}\n";
+                //    PreviousClientsCount = Server.Data.Clients.Count;
+                //}
+
+                if (Server.Data.Log.Count != 0)
                 {
-                    TextBoxClients.Clear();
-                    foreach (var client in Server.Data.Clients)
-                        TextBoxClients.Text += $"{client.Name}\n";
-                    PreviousClientsCount = Server.Data.Clients.Count;
+                    foreach (var message in Server.Data.Log)
+                        TextBoxClients.Text += $"{message}\n";
+                    Server.Data.Log.Clear();
                 }
 
                 if (PreviousCompletedRowsCount != Server.Data.CompletedRows.Count)
@@ -54,16 +80,19 @@ namespace T8_Telecommunication_Lab5_Server
                     PrintMatrix();
                     PreviousCompletedRowsCount = Server.Data.CompletedRows.Count;
                 }
-            }
-        }
 
-        private void ComboBoxClient_DropDownOpened(object sender, EventArgs e)
-        {
-            ComboBoxClient.Items.Clear();
-            lock (Server.Data)
-            {
-                foreach (var client in Server.Data.Clients)
-                    ComboBoxClient.Items.Add(new ComboBoxItem { Content = client.Name });
+                if (Server.Data.FreeRows.Count == 0 && !MessageCompleteIsShown)
+                {
+                    MessageCompleteIsShown = true;
+                    var res = MessageBox.Show("Matrix is sorted. Do you want to generate a new one?",
+                        "All work are done",
+                        MessageBoxButton.YesNo);
+                    if (res == MessageBoxResult.Yes)
+                    {
+                        ButtonGenerate.PerformClick();
+                        MessageCompleteIsShown = false;
+                    }
+                }
             }
         }
 
@@ -72,17 +101,22 @@ namespace T8_Telecommunication_Lab5_Server
             lock (Server.Data)
             {
                 TextBoxMatrix.Clear();
-                foreach (var t in Server.Data.Matrix)
+                for (var i = 0; i < Server.Data.Matrix.Count; i++)
                 {
-                    foreach (var t1 in t)
+                    foreach (var t1 in Server.Data.Matrix[i])
                         TextBoxMatrix.Text += $"{t1,4}";
-                    TextBoxMatrix.Text += "\n";
+
+                    if (Server.Data.CompletedRows.Contains(i))
+                        TextBoxMatrix.Text += "    ✓\n";
+                    else
+                        TextBoxMatrix.Text += "    ✗\n";
                 }
             }
         }
 
-        private void ButtonGenerate_Click(object sender, System.Windows.RoutedEventArgs e)
+        private void ButtonGenerate_Click(object sender, RoutedEventArgs e)
         {
+            MessageCompleteIsShown = false;
             ButtonStartServer.IsEnabled = true;
             lock (Server.Data)
             {

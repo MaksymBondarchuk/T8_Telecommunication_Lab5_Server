@@ -41,11 +41,15 @@ namespace T8_Telecommunication_Lab5_Server
                 // Start listening for connections.
                 while (true)
                 {
-                    Console.WriteLine(@"Waiting for a connection...");
+                    //lock (Data)
+                    //{
+                    //    Data.Log.Add(@"Waiting for a connection...");
+                    //}
                     // Program is suspended while waiting for an incoming connection.
                     Socket handler = listener.Accept();
                     string clientName = null;
 
+                    // Get client name
                     var bytes = new byte[1024];
                     int bytesRec = handler.Receive(bytes);
                     clientName += Encoding.ASCII.GetString(bytes, 0, bytesRec);
@@ -53,6 +57,7 @@ namespace T8_Telecommunication_Lab5_Server
                     var selectedIndex = -1;
                     lock (Data)
                     {
+                        // Check if have that name already
                         var aliases = Data.Clients.Count(client => client.Name.Contains(clientName));
                         if (aliases != 0)
                             clientName += $"({aliases + 1})";
@@ -63,23 +68,37 @@ namespace T8_Telecommunication_Lab5_Server
                             Socket = handler
                         });
 
-                        Console.WriteLine(@"Received client from PC with name : {0}", clientName);
-
-                        //byte[] msg = Encoding.ASCII.GetBytes(clientName);
-                        byte[] msg;
-                        if (Data.FreeRows.Count != 0)
+                        lock (Data)
                         {
-                            selectedIndex = Data.FreeRows[0];
-                            msg = Data.Matrix[selectedIndex].ToArray();
-                            //Data.FreeRows.RemoveAt(0);
+                            Data.Log.Add($"{DateTime.Now} Received client from PC with name : {clientName}");
                         }
-                        else
-                            msg = Encoding.ASCII.GetBytes("No work for you");
 
+                        // If no rows left
+                        if (Data.FreeRows.Count == 0)
+                        {
+                            lock (Data)
+                            {
+                                Data.Log.Add($"{DateTime.Now} No work for {clientName}");
+                            }
+
+                            handler.Shutdown(SocketShutdown.Both);
+                            handler.Close();
+                            continue;
+                        }
+
+                        // Send row to client
+                        selectedIndex = Data.FreeRows[0];
+                        var msg = Data.Matrix[selectedIndex].ToArray();
                         handler.Send(msg);
                     }
 
-                    bytesRec = handler.Receive(bytes);
+                    // Receive sorted row
+                    lock (Data)
+                    {
+                        Data.Log.Add($"{DateTime.Now} {clientName} sorted row {selectedIndex}");
+                        Data.Log.Add(null);
+                    }
+                    handler.Receive(bytes);
                     handler.Shutdown(SocketShutdown.Both);
                     handler.Close();
 

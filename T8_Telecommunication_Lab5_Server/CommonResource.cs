@@ -8,5 +8,6 @@ namespace T8_Telecommunication_Lab5_Server
         public List<List<byte>> Matrix = new List<List<byte>>();
         public List<int> CompletedRows = new List<int>();
         public List<int> FreeRows = new List<int>();
+        public List<string> Log = new List<string>(); 
     }
 }
