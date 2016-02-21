@@ -1,11 +1,9 @@
 ﻿using System;
-using System.ComponentModel;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
-using System.Windows.Media;
 
 namespace T8_Telecommunication_Lab5_Server
 {
@@ -23,12 +21,12 @@ namespace T8_Telecommunication_Lab5_Server
             // Establish the local endpoint for the socket.
             // Dns.GetHostName returns the name of the 
             // host running the application.
-            IPHostEntry ipHostInfo = Dns.Resolve(Dns.GetHostName());
+            IPHostEntry ipHostInfo = Dns.GetHostEntry(Dns.GetHostName());
             IPAddress ipAddress = ipHostInfo.AddressList[0];
             IPEndPoint localEndPoint = new IPEndPoint(ipAddress, 11000);
 
             // Create a TCP/IP socket.
-            Socket listener = new Socket(AddressFamily.InterNetwork,
+            Socket listener = new Socket(AddressFamily.InterNetworkV6,
                 SocketType.Stream, ProtocolType.Tcp);
 
             // Bind the socket to the local endpoint and 
@@ -41,10 +39,6 @@ namespace T8_Telecommunication_Lab5_Server
                 // Start listening for connections.
                 while (true)
                 {
-                    //lock (Data)
-                    //{
-                    //    Data.Log.Add(@"Waiting for a connection...");
-                    //}
                     // Program is suspended while waiting for an incoming connection.
                     Socket handler = listener.Accept();
                     string clientName = null;
@@ -54,7 +48,7 @@ namespace T8_Telecommunication_Lab5_Server
                     int bytesRec = handler.Receive(bytes);
                     clientName += Encoding.ASCII.GetString(bytes, 0, bytesRec);
 
-                    var selectedIndex = -1;
+                    int selectedIndex;
                     lock (Data)
                     {
                         // Check if have that name already
