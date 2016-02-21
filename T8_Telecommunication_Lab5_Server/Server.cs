@@ -9,13 +9,23 @@ namespace T8_Telecommunication_Lab5_Server
 {
     public class Server
     {
+        /// <summary>
+        /// Common resourse
+        /// </summary>
         public CommonResource Data = new CommonResource();
 
+        /// <summary>
+        /// Runs server on background
+        /// </summary>
+        /// <returns></returns>
         public async Task Run()
         {
             await Task.Run((Action)Accepter);
         }
 
+        /// <summary>
+        /// Accepts and handles clients
+        /// </summary>
         public void Accepter()
         {
             // Establish the local endpoint for the socket.
@@ -104,7 +114,6 @@ namespace T8_Telecommunication_Lab5_Server
                         Data.FreeRows.Remove(selectedIndex);
                     }
                 }
-
             }
             catch (Exception e)
             {
