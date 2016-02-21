@@ -30,7 +30,6 @@ namespace T8_Telecommunication_Lab5_Server
         public const int MatrixSize = 10;
         public Server Server = new Server();
         public int PreviousCompletedRowsCount;
-        public int PreviousClientsCount;
         public bool MessageCompleteIsShown;
 
         private readonly DispatcherTimer _timer =
@@ -46,28 +45,29 @@ namespace T8_Telecommunication_Lab5_Server
             _timer.Interval = new TimeSpan(0, 0, 0, 0, 100);
         }
 
+        /// <summary>
+        /// Starts server
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private async void ButtonStartServer_Click(object sender, RoutedEventArgs e)
         {
             ButtonStartServer.IsEnabled = false;
-            //ConsoleManager.Show();
             TextBoxClients.Text += "Server started\n";
             _timer.Start();
             await Server.Run();
             ButtonStartServer.IsEnabled = false;
         }
 
+        /// <summary>
+        /// Timer method
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void Tick(object sender, EventArgs e)
         {
             lock (Server.Data)
             {
-                //if (PreviousClientsCount != Server.Data.Clients.Count)
-                //{
-                //    TextBoxClients.Clear();
-                //    foreach (var client in Server.Data.Clients)
-                //        TextBoxClients.Text += $"{client.Name}\n";
-                //    PreviousClientsCount = Server.Data.Clients.Count;
-                //}
-
                 if (Server.Data.Log.Count != 0)
                 {
                     foreach (var message in Server.Data.Log)
@@ -96,6 +96,9 @@ namespace T8_Telecommunication_Lab5_Server
             }
         }
 
+        /// <summary>
+        /// Prints Server.Data.Matrix to TextBoxMatrix
+        /// </summary>
         private void PrintMatrix()
         {
             lock (Server.Data)
@@ -114,6 +117,11 @@ namespace T8_Telecommunication_Lab5_Server
             }
         }
 
+        /// <summary>
+        /// Generates random matrix to Server.Data.Matrix
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void ButtonGenerate_Click(object sender, RoutedEventArgs e)
         {
             MessageCompleteIsShown = false;
